@@ -1,0 +1,71 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE_PHP = "php-crud"
+        DOCKER_TAG = "latest"
+    }
+
+    stages {
+        // Stage 1: Clone Repository
+        stage('Clone Repo') {
+            steps {
+                git branch: 'main', url: 'https://github.com/yourname/your-php-crud.git' 
+            }
+        }
+
+        // Stage 2: Run OWASP Dependency Check
+        stage('Dependency Check') {
+            steps {
+                script {
+                    try {
+                        sh '''
+                            echo "[INFO] Running OWASP Dependency Check..."
+                            dependency-check.sh \
+                                --project "PHP CRUD App" \
+                                --scan . \
+                                --format XML \
+                                --out reports/
+                        '''
+                        dependencyCheckAnalyzer toolName: 'OWASP Dependency Check', pattern: 'reports/*.xml'
+                        dependencyCheckPublisher()
+                    } catch (Exception error) {
+                        echo "❌ Vulnerability found or scan failed!"
+                        currentBuild.result = 'FAILURE'
+                        throw error
+                    }
+                }
+            }
+        }
+
+        // Stage 3: Build Docker Images
+        stage('Build Docker Images') {
+            steps {
+                sh 'docker-compose build'
+            }
+        }
+
+        // Stage 4: Start Docker Containers
+        stage('Start Docker Stack') {
+            steps {
+                sh 'docker-compose up -d'
+            }
+        }
+
+        // Optional: Stop Docker Stack after test or manually
+        stage('Stop Docker Stack') {
+            steps {
+                sh 'docker-compose stop'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pipeline succeeded!'
+        }
+        failure {
+            echo '❌ Pipeline failed!'
+        }
+    }
+}
