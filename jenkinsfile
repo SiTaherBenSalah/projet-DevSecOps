@@ -1,0 +1,77 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_COMPOSE = 'docker-compose'
+        PROJECT_NAME = 'php-crud-app'
+    }
+
+    stages {
+        // Stage 1: Clone Repository
+        stage('Clone Repo') {
+            steps {
+                git branch: 'main', url: 'https://github.com/SiTaherBenSalah/projet-DevSecOps.git' 
+            }
+        }
+
+        // Stage 2: OWASP Dependency Check
+        stage('Dependency Scan - OWASP') {
+            steps {
+                script {
+                    try {
+                        echo '[INFO] Running OWASP Dependency Check...'
+                        sh '''
+                            mkdir -p reports
+                            dependency-check.sh \
+                                --project "PHP CRUD App" \
+                                --scan . \
+                                --format XML \
+                                --out reports/
+                        '''
+                        dependencyCheckAnalyzer toolName: 'OWASP Dependency Check', pattern: 'reports/*.xml'
+                        dependencyCheckPublisher()
+                    } catch (Exception e) {
+                        echo "[ERROR] Vulnerabilities found or scan failed: ${e}"
+                        currentBuild.result = 'FAILURE'
+                        throw e
+                    }
+                }
+            }
+        }
+
+        // Stage 3: Build Docker Images
+        stage('Build with Docker Compose') {
+            steps {
+                echo '[INFO] Building Docker containers...'
+                sh "${DOCKER_COMPOSE} build"
+            }
+        }
+
+        // Stage 4: Start Docker Stack
+        stage('Start Docker Containers') {
+            steps {
+                echo '[INFO] Starting Docker stack...'
+                sh "${DOCKER_COMPOSE} up -d"
+            }
+        }
+
+        // Optional: Run Tests Here (e.g., curl localhost:8080)
+    }
+
+    post {
+        success {
+            echo '✅ Build and deployment succeeded!'
+        }
+        failure {
+            echo '❌ Build failed. Check logs for details.'
+        }
+        always {
+            echo '🧹 Cleaning up Docker containers...'
+            sh """
+                if ${DOCKER_COMPOSE} ps > /dev/null 2>&1; then \\
+                    ${DOCKER_COMPOSE} stop; \\
+                fi
+            """
+        }
+    }
+}
