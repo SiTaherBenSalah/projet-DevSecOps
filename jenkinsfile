@@ -12,7 +12,7 @@ pipeline {
             steps {
                git branch: 'main',
     url: 'https://github.com/SiTaherBenSalah/projet-DevSecOps.git', 
-    credentialsId: 'e7c84d6a-9482-491c-b8e5-d90e3fede3e5'
+    credentialsId: 'github-cred'
             }
         }
 
