@@ -7,73 +7,74 @@ pipeline {
     }
 
     stages {
-        // Stage 1: Clone Repository
+        // Stage 1: Cloner le dépôt GitHub
         stage('Clone Repo') {
             steps {
-               git branch: 'main',
-    url: 'https://github.com/SiTaherBenSalah/projet-DevSecOps.git', 
-    credentialsId: 'github-cred'
+                git branch: 'main', // <-- Assure-toi que ta branche GitHub s'appelle bien 'main'. Sinon, remplace par 'master'
+                    url: 'https://github.com/SiTaherBenSalah/projet-DevSecOps.git',
+                    credentialsId: 'github-cred' // <-- L'identifiant que tu as mis lors de l'ajout du token dans Jenkins
             }
         }
 
-        // Stage 2: OWASP Dependency Check
+        // Stage 2: Analyse de dépendances OWASP
         stage('Dependency Scan - OWASP') {
             steps {
                 script {
-                    try {
-                        echo '[INFO] Running OWASP Dependency Check...'
-                        sh '''
-                            mkdir -p reports
-                            dependency-check.sh \
-                                --project "PHP CRUD App" \
-                                --scan . \
-                                --format XML \
-                                --out reports/
-                        '''
-                        dependencyCheckAnalyzer toolName: 'OWASP Dependency Check', pattern: 'reports/*.xml'
-                        dependencyCheckPublisher()
-                    } catch (Exception e) {
-                        echo "[ERROR] Vulnerabilities found or scan failed: ${e}"
-                        currentBuild.result = 'FAILURE'
-                        throw e
-                    }
+                    echo '[INFO] Lancement de OWASP Dependency Check...'
+                    sh '''
+                        mkdir -p reports
+                        dependency-check.sh \
+                            --project "PHP CRUD App" \
+                            --scan . \
+                            --format XML \
+                            --out reports/
+                    '''
                 }
+                // Publier les résultats
+                dependencyCheckPublisher pattern: 'reports/*.xml'
             }
         }
 
-        // Stage 3: Build Docker Images
+        // Stage 3: Build des conteneurs Docker
         stage('Build with Docker Compose') {
             steps {
-                echo '[INFO] Building Docker containers...'
+                echo '[INFO] Build des conteneurs Docker...'
                 sh "${DOCKER_COMPOSE} build"
             }
         }
 
-        // Stage 4: Start Docker Stack
+        // Stage 4: Démarrage des conteneurs
         stage('Start Docker Containers') {
             steps {
-                echo '[INFO] Starting Docker stack...'
+                echo '[INFO] Lancement des conteneurs Docker...'
                 sh "${DOCKER_COMPOSE} up -d"
             }
         }
 
-        // Optional: Run Tests Here (e.g., curl localhost:8080)
+        // Stage 5 (optionnel): Tests (ex: ping d'une URL)
+        stage('Basic App Test') {
+            steps {
+                echo '[INFO] Vérification de l\'application...'
+                sh 'curl -s http://localhost:8080 || true' // Adapte l'URL selon ton port exposé
+            }
+        }
     }
 
     post {
         success {
-            echo '✅ Build and deployment succeeded!'
+            echo '✅ Build et déploiement terminés avec succès !'
         }
         failure {
-            echo '❌ Build failed. Check logs for details.'
+            echo '❌ Échec du build. Vérifiez les journaux.'
         }
         always {
-            echo '🧹 Cleaning up Docker containers...'
-            sh """
-                if ${DOCKER_COMPOSE} ps > /dev/null 2>&1; then \\
-                    ${DOCKER_COMPOSE} stop; \\
+            echo '🧹 Nettoyage des conteneurs Docker...'
+            sh '''
+                if ${DOCKER_COMPOSE} ps > /dev/null 2>&1; then
+                    ${DOCKER_COMPOSE} stop
+                    ${DOCKER_COMPOSE} down
                 fi
-            """
+            '''
         }
     }
 }
