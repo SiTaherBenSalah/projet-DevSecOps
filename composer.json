@@ -1,0 +1,16 @@
+{
+    "name": "taher-ben-salah/projet-dev-sec-ops",
+    "description": "php curd project for DevSecOps",
+    "autoload": {
+        "psr-4": {
+            "TaherBenSalah\\ProjetDevSecOps\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "SiTaherBneSalah",
+            "email": "bensalahtaher56@gmail.com"
+        }
+    ],
+    "require": {}
+}
