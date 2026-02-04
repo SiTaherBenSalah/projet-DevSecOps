@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-app-deployment
+  labels:
+    app: php-app
+spec:
+  replicas: 2 # Lance 2 instances de ton app sur le Worker Node
+  selector:
+    matchLabels:
+      app: php-app
+  template:
+    metadata:
+      labels:
+        app: php-app
+    spec:
+      containers:
+      - name: php-container
+        # IMPORTANT: Laisse ce tag, le Jenkinsfile le remplacera dynamiquement
+        image: DOCKERHUB_USER/php-crud-app:latest 
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-app-service
+spec:
+  type: NodePort # Permet d'accéder à l'app via l'IP du Worker Node
+  selector:
+    app: php-app
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30001 # Ton app sera sur http://IP_DU_WORKER:30001
