@@ -17,7 +17,8 @@ spec:
       containers:
       - name: php-container
         # IMPORTANT: Laisse ce tag, le Jenkinsfile le remplacera dynamiquement
-        image: DOCKERHUB_USER/php-crud-app:latest 
+        image: local/php-crud-app:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
 ---
